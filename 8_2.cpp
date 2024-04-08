@@ -1,85 +1,62 @@
-#include <iostream>
-#include <vector>
-#include <algorithm>
-#include <climits>
-
+#include <bits/stdc++.h>
 using namespace std;
 
-typedef pair<int, pair<int, int>> Edge; // {cost, {node1, node2}}
-typedef pair<int, int> ColoredEdge; // {cost, color}
+int graph[18][18][2];
+long long dp[1 << 18][18][2];
 
-int findParent(vector<int>& parent, int x) {
-    if (parent[x] == -1)
-        return x;
-    return parent[x] = findParent(parent, parent[x]);
+long long minCost(int n, int m, int mask, int prev, int col)
+{
+	if (mask == ((1 << n) - 1)) {
+		return 0;
+	}
+	if (dp[mask][prev][col == 1] != 0) {
+		return dp[mask][prev][col == 1];
+	}
+
+	long long ans = 1e9;
+
+	for (int i = 0; i < n; i++) {
+		for (int j = 0; j < 2; j++) {
+			if (graph[prev][i][j] && !(mask & (1 << i)) && (j != col)) {
+				long long z = graph[prev][i][j] + minCost(n,m,mask|(1<<i),i,j);
+				ans = min(z, ans);
+			}
+		}
+	}
+
+	return dp[mask][prev][col == 1] = ans;
 }
 
-void unionSet(vector<int>& parent, vector<int>& rank, int x, int y) {
-    int xroot = findParent(parent, x);
-    int yroot = findParent(parent, y);
-
-    if (rank[xroot] < rank[yroot])
-        parent[xroot] = yroot;
-    else if (rank[xroot] > rank[yroot])
-        parent[yroot] = xroot;
-    else {
-        parent[yroot] = xroot;
-        rank[xroot]++;
-    }
+void makeGraph(vector<pair<pair<int,int>, pair<int,char>>>& vp,int m){
+	for (int i = 0; i < m; i++) {
+		int a = vp[i].first.first - 1;
+		int b = vp[i].first.second - 1;
+		int cost = vp[i].second.first;
+		char color = vp[i].second.second;
+		graph[a][b][color == 'W'] = cost;
+		graph[b][a][color == 'W'] = cost;
+	}
 }
 
-vector<ColoredEdge> alternatingMST(vector<vector<ColoredEdge>>& graph, int n) {
-    vector<Edge> edges;
-    for (int u = 0; u < n; u++) {
-        for (auto edge : graph[u]) {
-            edges.push_back({edge.first, {u, edge.second}});
-        }
-    }
-
-    sort(edges.begin(), edges.end());
-
-    vector<ColoredEdge> mst;
-    vector<int> parent(n, -1);
-    vector<int> rank(n, 0);
-
-    int prevColor = -1;
-    for (auto edge : edges) {
-        int u = edge.second.first;
-        int v = edge.second.second;
-        int cost = edge.first;
-        int color = v;
-
-        if (findParent(parent, u) != findParent(parent, v)) {
-            if (prevColor == -1 || prevColor != color) {
-                mst.push_back({cost, color});
-                unionSet(parent, rank, u, v);
-                prevColor = color;
-            }
-        }
-    }
-
-    return mst;
+int getCost(int n,int m){
+	long long ans = 1e9;
+	for (int i = 0; i < n; i++) {
+		ans = min(ans, minCost(n, m, 1 << i, i, 2));
+	}
+	return ans != 1e9 ? ans : -1;
 }
 
-int main() {
-    int n = 5;
-    vector<vector<ColoredEdge>> graph(n);
+int main()
+{
+	int n = 3, m = 4;
+	vector<pair<pair<int, int>, pair<int, char> > > vp = {
+		{ { 1, 2 }, { 2, 'B' } },
+		{ { 1, 2 }, { 3, 'W' } },
+		{ { 2, 3 }, { 4, 'W' } },
+		{ { 2, 3 }, { 5, 'B' } }
+	};
 
-    // Example graph
-    graph[0].push_back({2, 1});
-    graph[0].push_back({6, 0});
-    graph[1].push_back({3, 0});
-    graph[1].push_back({8, 1});
-    graph[1].push_back({5, 0});
-    graph[2].push_back({7, 1});
-    graph[3].push_back({9, 0});
-
-    vector<ColoredEdge> mst = alternatingMST(graph, n);
-
-    cout << "Minimum Spanning Tree with Alternating Colored Edges:\n";
-    for (auto edge : mst) {
-        cout << "Cost: " << edge.first << ", Color: " << edge.second << "\n";
-    }
-
-    return 0;
+	makeGraph(vp,m);
+	cout << getCost(n,m) << '\n';
+	return 0;
 }
